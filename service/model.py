@@ -31,8 +31,9 @@ class LineStation(Base):
   station_id = Column(Integer, ForeignKey("station.id"))
   line = relationship("Line", back_populates="line_station")
   line_id = Column(Integer, ForeignKey("line.id"))
+  line_station = relationship("RouteGroup", back_populates="line_station")
+  line_station_id = Column(Integer, ForeignKey("line_station.id"))
   is_active = Column(Boolean, index=True)
-  # route = relationship("Route", back_populates="line_station")
   route_station = relationship("RouteStation", back_populates="line_station")
 
 class RouteGroup(Base):
@@ -41,14 +42,15 @@ class RouteGroup(Base):
   line = relationship("Line", back_populates="route_groups")
   line_id = Column(Integer, ForeignKey("line.id"))
   name = Column(String, index=True)
+  code = Column(String, index=True)
   route = relationship("Route", back_populates="route_group")
+  line_station = relationship("LineStation", back_populates="route_group")
 
 class Route(Base):
   __tablename__ = "route"
   id = Column(Integer, primary_key=True, index=True)
   route_group = relationship("RouteGroup", back_populates="route")
   route_group_id = Column(Integer, ForeignKey("route_group.id"))
-  # line_station = relationship("LineStation", back_populates="route")
   start_station_id = Column(Integer, ForeignKey("line_station.id"))
   end_station_id = Column(Integer, ForeignKey("line_station.id"))
   via_station_id = Column(Integer, ForeignKey("line_station.id"))
