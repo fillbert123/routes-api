@@ -31,8 +31,8 @@ class LineStation(Base):
   station_id = Column(Integer, ForeignKey("station.id"))
   line = relationship("Line", back_populates="line_station")
   line_id = Column(Integer, ForeignKey("line.id"))
-  line_station = relationship("RouteGroup", back_populates="line_station")
-  line_station_id = Column(Integer, ForeignKey("line_station.id"))
+  route_group = relationship("RouteGroup", back_populates="line_station")
+  route_group_id = Column(Integer, ForeignKey("route_group.id"))
   is_active = Column(Boolean, index=True)
   route_station = relationship("RouteStation", back_populates="line_station")
 
