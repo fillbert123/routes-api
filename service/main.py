@@ -149,3 +149,23 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
     })
   data = list(grouped.values())
   return data
+
+@app.get("/getRouteByRouteGroupId/{route_group_id}")
+def get_route_by_route_group_id(route_group_id: int, db=Depends(get_db)):
+  sql = text("""
+    SELECT
+      r.id,
+      r.route_group_id,
+      s1.name_en,
+      s2.name_en
+    FROM route r
+    JOIN line_station ls1 ON ls1.id = r.start_station_id
+    JOIN line_station ls2 ON ls2.id = r.end_station_id
+    JOIN station s1 ON s1.id = ls1.station_id
+    JOIN station s2 ON s2.id = ls2.station_id
+    WHERE r.route_group_id = :route_group_id
+    ORDER BY r.id;
+  """)
+  result = [row._asdict() for row in db.execute(sql, {"route_group_id": route_group_id})]
+  data = result
+  return data
