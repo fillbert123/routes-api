@@ -1,8 +1,17 @@
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from service.database import get_db
 from sqlalchemy import text
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/getAllRoutesByLine")
 def get_all_routes_by_line(db=Depends(get_db)):
