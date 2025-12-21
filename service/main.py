@@ -121,6 +121,7 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
       s.name_en current_station_name,
       ls.code current_station_code,
       l.color line_color,
+      rg.code route_group_code,
       rs.route_id route_id,
       s2.name_en next_station_name,
       ls2.code next_station_code,
@@ -129,6 +130,7 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
     FROM station s 
     JOIN line_station ls ON ls.station_id = s.id
     JOIN line l ON l.id = ls.line_id
+    JOIN route_group rg ON rg.id = ls.route_group_id
     JOIN route_station rs ON rs.line_station_id = ls.id
     JOIN route_station rs2 ON rs2.stop_sequence = rs.stop_sequence + 1 AND rs2.route_id = rs.route_id
     JOIN line_station ls2 ON ls2.id = rs2.line_station_id
@@ -148,6 +150,7 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
         "current_station_name": row["current_station_name"],
         "current_station_code": row["current_station_code"],
         "line_color": row["line_color"],
+        "route_group": row["route_group_code"],
         "next_station": []
       }
     grouped[key]["next_station"].append({
