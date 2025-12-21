@@ -120,6 +120,7 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
     SELECT DISTINCT ON (rs.route_id)
       s.name_en current_station_name,
       ls.code current_station_code,
+      l.code line_code,
       l.name line_name,
       l.color line_color,
       rg.code route_group_code,
@@ -150,6 +151,7 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
       grouped[key] = {
         "current_station_name": row["current_station_name"],
         "current_station_code": row["current_station_code"],
+        "line_code": row["line_code"],
         "line_name": row["line_name"],
         "line_color": row["line_color"],
         "route_group": row["route_group_code"],
