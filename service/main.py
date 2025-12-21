@@ -146,18 +146,38 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
   result = [row._asdict() for row in db.execute(sql, {"station_id": station_id})]
   grouped = {}
   for row in result:
-    key = (row["current_station_name"], row["current_station_code"], row["line_color"])
-    if key not in grouped:
-      grouped[key] = {
-        "current_station_name": row["current_station_name"],
-        "current_station_code": row["current_station_code"],
+    line_key = row["line_code"]
+    if line_key not in grouped:
+      grouped[line_key] = {
         "line_code": row["line_code"],
         "line_name": row["line_name"],
         "line_color": row["line_color"],
+        "track": []
+      }
+    track_key = (
+      row["current_station_name"],
+      row["current_station_code"],
+      row["route_group_code"]
+    )
+    track = next((
+        t for t in grouped[line_key]["track"]
+        if (
+          t["current_station_name"],
+          t["current_station_code"],
+          t["route_group"]
+        ) == track_key
+      ),
+      None
+    )
+    if track is None:
+      track = {
+        "current_station_name": row["current_station_name"],
+        "current_station_code": row["current_station_code"],
         "route_group": row["route_group_code"],
         "next_station": []
       }
-    grouped[key]["next_station"].append({
+      grouped[line_key]["track"].append(track)
+    track["next_station"].append({
       "next_station_name": row["next_station_name"],
       "next_station_code": row["next_station_code"],
       "end_station_name": row["end_station_name"],
@@ -165,6 +185,7 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
     })
   data = list(grouped.values())
   return data
+
 
 @app.get("/getRouteByRouteGroupId/{route_group_id}")
 def get_route_by_route_group_id(route_group_id: int, db=Depends(get_db)):
