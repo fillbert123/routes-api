@@ -120,6 +120,7 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
     SELECT DISTINCT ON (rs.route_id)
       s.name_en current_station_name,
       ls.code current_station_code,
+      l.name line_name,
       l.color line_color,
       rg.code route_group_code,
       rs.route_id route_id,
