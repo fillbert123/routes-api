@@ -123,6 +123,7 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
       l.code line_code,
       l.name line_name,
       l.color line_color,
+      rg.id route_group_id,
       rg.code route_group_code,
       rs.route_id route_id,
       s2.name_en next_station_name,
@@ -173,6 +174,7 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
       track = {
         "current_station_name": row["current_station_name"],
         "current_station_code": row["current_station_code"],
+        "route_group_id": row["route_group_id"],
         "route_group": row["route_group_code"],
         "next_station": []
       }
