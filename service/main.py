@@ -150,6 +150,7 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
       grouped[key] = {
         "current_station_name": row["current_station_name"],
         "current_station_code": row["current_station_code"],
+        "line_name": row["line_name"],
         "line_color": row["line_color"],
         "route_group": row["route_group_code"],
         "next_station": []
