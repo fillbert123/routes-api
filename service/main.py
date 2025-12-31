@@ -126,8 +126,10 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
       rg.id route_group_id,
       rg.code route_group_code,
       rs.route_id route_id,
+      s2.id next_station_id,
       s2.name_en next_station_name,
       ls2.code next_station_code,
+      s3.id end_station_id
       s3.name_en end_station_name,
       ls3.code end_station_code
     FROM station s 
@@ -180,14 +182,15 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
       }
       grouped[line_key]["track"].append(track)
     track["next_station"].append({
+      "next_station_id": row["next_station_id"],
       "next_station_name": row["next_station_name"],
       "next_station_code": row["next_station_code"],
+      "end_station_id": row["end_station_id"],
       "end_station_name": row["end_station_name"],
       "end_station_code": row["end_station_code"]
     })
   data = list(grouped.values())
   return data
-
 
 @app.get("/getRouteByRouteGroupId/{route_group_id}")
 def get_route_by_route_group_id(route_group_id: int, db=Depends(get_db)):
