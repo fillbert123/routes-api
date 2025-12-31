@@ -129,7 +129,7 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
       s2.id next_station_id,
       s2.name_en next_station_name,
       ls2.code next_station_code,
-      s3.id end_station_id
+      s3.id end_station_id,
       s3.name_en end_station_name,
       ls3.code end_station_code
     FROM station s 
