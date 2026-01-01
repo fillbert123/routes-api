@@ -3,7 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from service.database import get_db
 from sqlalchemy import text
 
-app = FastAPI()
+app = FastAPI(
+  title="Route API",
+  version="0.1.17",
+  description="Route API (Reykjavik)"
+)
 
 app.add_middleware(
     CORSMiddleware,
