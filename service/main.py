@@ -120,36 +120,69 @@ def get_route_station(route_id: int, db=Depends(get_db)):
 
 @app.get("/getRouteDetail/{station_id}")
 def get_route_detail(station_id: int, db=Depends(get_db)):
-  sql = text("""
-    SELECT DISTINCT ON (rs.route_id)
-      s.name_en current_station_name,
-      ls.code current_station_code,
-      l.code line_code,
-      l.name line_name,
-      l.color line_color,
-      rg.id route_group_id,
-      rg.code route_group_code,
-      rs.route_id route_id,
-      s2.id next_station_id,
-      s2.name_en next_station_name,
-      ls2.code next_station_code,
-      s3.id end_station_id,
-      s3.name_en end_station_name,
-      ls3.code end_station_code
-    FROM station s 
-    JOIN line_station ls ON ls.station_id = s.id
-    JOIN line l ON l.id = ls.line_id
-    JOIN route_group rg ON rg.id = ls.route_group_id
-    JOIN route_station rs ON rs.line_station_id = ls.id
-    JOIN route_station rs2 ON rs2.stop_sequence = rs.stop_sequence + 1 AND rs2.route_id = rs.route_id
-    JOIN line_station ls2 ON ls2.id = rs2.line_station_id
-    JOIN station s2 ON s2.id = ls2.station_id
-    JOIN route r ON r.id = rs2.route_id
-    JOIN line_station ls3 ON ls3.id = r.end_station_id
-    JOIN station s3 ON s3.id = ls3.station_id
-    WHERE s.id = :station_id
-    ORDER BY rs.route_id, rs.stop_sequence DESC;
-  """)
+  SPECIAL_LRT_STATION = {104, 193, 194, 195, 196}
+  if station_id in SPECIAL_LRT_STATION:
+    sql = text("""
+      SELECT DISTINCT ON (s2.id)
+        s.name_en current_station_name,
+        ls.code current_station_code,
+        l.code line_code,
+        l.name line_name,
+        l.color line_color,
+        rg.id route_group_id,
+        rg.code route_group_code,
+        rs.route_id route_id,
+        s2.id next_station_id,
+        s2.name_en next_station_name,
+        ls2.code next_station_code,
+        s3.id end_station_id,
+        s3.name_en end_station_name,
+        ls3.code end_station_code
+      FROM station s 
+      JOIN line_station ls ON ls.station_id = s.id
+      JOIN line l ON l.id = ls.line_id
+      JOIN route_group rg ON rg.id = ls.route_group_id
+      JOIN route_station rs ON rs.line_station_id = ls.id
+      JOIN route_station rs2 ON rs2.stop_sequence = rs.stop_sequence + 1 AND rs2.route_id = rs.route_id
+      JOIN line_station ls2 ON ls2.id = rs2.line_station_id
+      JOIN station s2 ON s2.id = ls2.station_id
+      JOIN route r ON r.id = rs2.route_id
+      JOIN line_station ls3 ON ls3.id = r.end_station_id
+      JOIN station s3 ON s3.id = ls3.station_id
+      WHERE s.id = :station_id
+      ORDER BY s2.id, rs.stop_sequence DESC;
+    """)
+  else:
+    sql = text("""
+      SELECT DISTINCT ON (rs.route_id)
+        s.name_en current_station_name,
+        ls.code current_station_code,
+        l.code line_code,
+        l.name line_name,
+        l.color line_color,
+        rg.id route_group_id,
+        rg.code route_group_code,
+        rs.route_id route_id,
+        s2.id next_station_id,
+        s2.name_en next_station_name,
+        ls2.code next_station_code,
+        s3.id end_station_id,
+        s3.name_en end_station_name,
+        ls3.code end_station_code
+      FROM station s 
+      JOIN line_station ls ON ls.station_id = s.id
+      JOIN line l ON l.id = ls.line_id
+      JOIN route_group rg ON rg.id = ls.route_group_id
+      JOIN route_station rs ON rs.line_station_id = ls.id
+      JOIN route_station rs2 ON rs2.stop_sequence = rs.stop_sequence + 1 AND rs2.route_id = rs.route_id
+      JOIN line_station ls2 ON ls2.id = rs2.line_station_id
+      JOIN station s2 ON s2.id = ls2.station_id
+      JOIN route r ON r.id = rs2.route_id
+      JOIN line_station ls3 ON ls3.id = r.end_station_id
+      JOIN station s3 ON s3.id = ls3.station_id
+      WHERE s.id = :station_id
+      ORDER BY rs.route_id, rs.stop_sequence DESC;
+    """)
   result = [row._asdict() for row in db.execute(sql, {"station_id": station_id})]
   grouped = {}
   for row in result:
