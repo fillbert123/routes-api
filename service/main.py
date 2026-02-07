@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.1.18",
+  version="0.1.20",
   description="Route API (Reykjavik)"
 )
 
@@ -237,15 +237,21 @@ def get_route_detail(station_id: int, db=Depends(get_db)):
 def get_route_by_route_group_id(route_group_id: int, db=Depends(get_db)):
   sql = text("""
     SELECT
-      r.id,
-      r.route_group_id,
-      s1.name_en,
-      s2.name_en
+      r.id route_id,
+      r.route_group_id route_group_id,
+      s1.name_en start_station_name,
+      s2.name_en end_station_name,
+	    s3.name_en complete_start_station_name,
+	    s4.name_en complete_end_station_name
     FROM route r
     JOIN line_station ls1 ON ls1.id = r.start_station_id
     JOIN line_station ls2 ON ls2.id = r.end_station_id
+	  JOIN line_station ls3 ON ls3.id = r.complete_start_station_id
+	  JOIN line_station ls4 ON ls4.id = r.complete_end_station_id
     JOIN station s1 ON s1.id = ls1.station_id
     JOIN station s2 ON s2.id = ls2.station_id
+	  JOIN station s3 ON s3.id = ls3.station_id
+	  JOIN station s4 ON s4.id = ls4.station_id
     WHERE r.route_group_id = :route_group_id
     ORDER BY r.id;
   """)
