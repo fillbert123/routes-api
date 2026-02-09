@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.1.20",
+  version="0.1.22",
   description="Route API (Reykjavik)"
 )
 
@@ -266,8 +266,8 @@ def get_search_station_result(query: str, db=Depends(get_db)):
       id station_id,
 	    name_en station_name
     FROM station
-    WHERE LOWER(name_en) LIKE LOWER('%:query%');
+    WHERE LOWER(name_en) LIKE LOWER(:query);
   """)
-  result = [row._asdict() for row in db.execute(sql, {"query": query})]
+  result = [row._asdict() for row in db.execute(sql, {"query": '%' + query + '%'})]
   data = result
   return data
