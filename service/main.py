@@ -258,3 +258,16 @@ def get_route_by_route_group_id(route_group_id: int, db=Depends(get_db)):
   result = [row._asdict() for row in db.execute(sql, {"route_group_id": route_group_id})]
   data = result
   return data
+
+@app.get("/getSearchStationResult/{query}")
+def get_search_station_result(query: str, db=Depends(get_db)):
+  sql = text("""
+    SELECT 
+      id station_id,
+	    name_en station_name
+    FROM station
+    WHERE LOWER(name_en) LIKE LOWER('%:query%');
+  """)
+  result = [row._asdict() for row in db.execute(sql, {"query": query})]
+  data = result
+  return data
