@@ -271,7 +271,7 @@ def get_search_station_result(query: str, db=Depends(get_db)):
     JOIN line_station ls ON ls.station_id = s.id
     JOIN line l ON l.id = ls.line_id
     WHERE LOWER(s.name_en) LIKE LOWER(:query)
-    ORDER BY station_id;
+    ORDER BY l.id;
   """)
   result = [row._asdict() for row in db.execute(sql, {"query": '%' + query + '%'})]
   grouped = {}
