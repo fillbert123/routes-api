@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.1.22",
+  version="0.1.23",
   description="Route API (Reykjavik)"
 )
 
@@ -261,13 +261,31 @@ def get_route_by_route_group_id(route_group_id: int, db=Depends(get_db)):
 
 @app.get("/getSearchStationResult/{query}")
 def get_search_station_result(query: str, db=Depends(get_db)):
-  sql = text("""
+  sql = text("""             
     SELECT 
-      id station_id,
-	    name_en station_name
-    FROM station
-    WHERE LOWER(name_en) LIKE LOWER(:query);
+	    s.id station_id,
+      s.name_en station_name,
+      ls.code line_code,
+      l.color line_color
+    FROM station s
+    JOIN line_station ls ON ls.station_id = s.id
+    JOIN line l ON l.id = ls.line_id
+    WHERE LOWER(s.name_en) LIKE LOWER(:query)
+    ORDER BY station_id;
   """)
   result = [row._asdict() for row in db.execute(sql, {"query": '%' + query + '%'})]
-  data = result
+  grouped = {}
+  for row in result:
+    key = (row["station_id"], row["station_name"])
+    if key not in grouped:
+      grouped[key] = {
+        "station_id": row["station_id"],
+        "station_name": row["station_name"],
+        "interchanges": []
+      }
+    grouped[key]["interchanges"].append({
+      "line_code": row["line_code"],
+      "line_color": row["line_color"]
+    })
+  data = list(grouped.values())
   return data
