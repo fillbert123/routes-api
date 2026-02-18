@@ -284,7 +284,7 @@ def get_search_station_result(query: str, db=Depends(get_db)):
         "interchanges": []
       }
     grouped[key]["interchanges"].append({
-      "line_code": row["line_code"],
+      "line_station_code": row["line_code"],
       "line_color": row["line_color"]
     })
   data = list(grouped.values())
