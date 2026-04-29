@@ -381,6 +381,7 @@ def get_route_group(routeGroupId: int, db=Depends(get_db)):
       grouped[route_group_key] = {
         "id": row["route_group_id"],
         "name": row["route_group_name"],
+        "code": row["route_group_code"],
         "color": row["route_group_color"],
         "isActive": row["route_group_is_active"],
         "route": []
@@ -396,6 +397,10 @@ def get_route_group(routeGroupId: int, db=Depends(get_db)):
         "endName": row["route_complete_terminus_end_name"]
       }
     })
+  for group in grouped.values():
+    if group["route"]:
+      group["route"].append(group["route"].pop(0))
+
   return next(iter(grouped.values()))
 
 @app.get("/getRoute/{routeId}", tags=["v2"], deprecated=False)
@@ -572,7 +577,7 @@ def get_station(stationId: int, db=Depends(get_db)):
         },
       }
     
-    if(route_group_key != 13):
+    if(route_group_key != SPECIAL_LRT_LINE_ID):
       sqlGetRouteGroupTerminus = text("""
         SELECT
           s.id AS terminus_id,
