@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.2.4",
+  version="0.2.5",
   description="Route API (Reykjavik)"
 )
 
@@ -476,7 +476,7 @@ def get_station(stationId: int, db=Depends(get_db)):
         l.name AS line_name,
         l.code AS line_code,
         l.color AS line_color,
-        l.is_active AS line_is_active,
+        ls.is_active AS line_is_active,
         rg.id AS route_group_id,
         rg.name AS route_group_name,
         rg.code AS route_group_code,
@@ -514,7 +514,7 @@ def get_station(stationId: int, db=Depends(get_db)):
         l.name AS line_name,
         l.code AS line_code,
         l.color AS line_color,
-        l.is_active AS line_is_active,
+        ls.is_active AS line_is_active,
         rg.id AS route_group_id,
         rg.name AS route_group_name,
         rg.code AS route_group_code,
