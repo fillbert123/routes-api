@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.2.5",
+  version="0.2.6",
   description="Route API (Reykjavik)"
 )
 
@@ -476,10 +476,11 @@ def get_station(stationId: int, db=Depends(get_db)):
         l.name AS line_name,
         l.code AS line_code,
         l.color AS line_color,
-        ls.is_active AS line_is_active,
+        l.is_active AS line_is_active,
         rg.id AS route_group_id,
         rg.name AS route_group_name,
         rg.code AS route_group_code,
+        ls.is_active AS route_is_active,
         rs.route_id AS route_id,
         s.id AS current_station_id,
         s.name_en AS current_station_name,
@@ -514,10 +515,11 @@ def get_station(stationId: int, db=Depends(get_db)):
         l.name AS line_name,
         l.code AS line_code,
         l.color AS line_color,
-        ls.is_active AS line_is_active,
+        l.is_active AS line_is_active,
         rg.id AS route_group_id,
         rg.name AS route_group_name,
         rg.code AS route_group_code,
+        ls.is_active AS route_is_active,
         rs.route_id AS route_id,
         s.id AS current_station_id,
         s.name_en AS current_station_name,
@@ -570,6 +572,7 @@ def get_station(stationId: int, db=Depends(get_db)):
         "id": row["route_group_id"],
         "name": row["route_group_name"],
         "code": row["route_group_code"],
+        "isActive": row["route_is_active"],
         "currentStation": {
           "id": row["current_station_id"],
           "name": row["current_station_name"],
