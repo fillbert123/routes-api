@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.2.2",
+  version="0.2.3",
   description="Route API (Reykjavik)"
 )
 
@@ -413,7 +413,7 @@ def get_route(routeId: int, db=Depends(get_db)):
       s.id AS station_id,
       s.name_en AS station_name,
       ls.code AS station_code,
-      s.is_active AS station_is_active,
+      ls.is_active AS station_is_active,
       ls2.id AS station_interchange_id,
       rg.code AS station_interchange_code,
       ls2.code AS station_interchange_station_code,
