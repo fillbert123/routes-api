@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.2.6",
+  version="0.2.7",
   description="Route API (Reykjavik)"
 )
 
@@ -465,7 +465,7 @@ def get_route(routeId: int, db=Depends(get_db)):
 def get_station(stationId: int, db=Depends(get_db)):
   sqlGetStation = ""
   SPECIAL_LRT_STATION_ID = {104, 193, 194, 195, 196}
-  SPECIAL_LRT_LINE_ID = 13
+  SPECIAL_LRT_ROUTE_GROUP_ID = 13
   if(stationId in SPECIAL_LRT_STATION_ID):
     sqlGetStation = text("""
       SELECT DISTINCT ON (s2.id)
@@ -580,7 +580,29 @@ def get_station(stationId: int, db=Depends(get_db)):
         },
       }
     
-    if(route_group_key != SPECIAL_LRT_LINE_ID):
+    LOOP_LINE_ID = {10, 11}
+    if(line_key in LOOP_LINE_ID):
+      if("nextStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
+        grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"] = {
+          "id": row["next_station_id"],
+          "name": row["next_station_name"],
+          "code": row["next_station_code"],
+          "terminus": {
+            "id": [row["end_station_id"]],
+            "name": [row["end_station_name"]]
+          }
+        }
+      elif("previousStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
+        grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["previousStation"] = {
+          "id": row["next_station_id"],
+          "name": row["next_station_name"],
+          "code": row["next_station_code"],
+          "terminus": {
+            "id": [row["end_station_id"]],
+            "name": [row["end_station_name"]]
+          }
+        }
+    elif(route_group_key != SPECIAL_LRT_ROUTE_GROUP_ID):
       sqlGetRouteGroupTerminus = text("""
         SELECT
           s.id AS terminus_id,
@@ -635,6 +657,11 @@ def get_station(stationId: int, db=Depends(get_db)):
               "name": [branchTerminus['terminus_name']]
             }
           }
+      
+      route_group = grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]
+      if("nextStation" in route_group and "branchStation" in route_group):
+        grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["previousStation"] = grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"]
+        grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"] = grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["branchStation"]
     else:
       if("previousStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
         grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["previousStation"] = {
