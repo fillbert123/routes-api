@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.2.7",
+  version="0.2.8",
   description="Route API (Reykjavik)"
 )
 
@@ -659,40 +659,63 @@ def get_station(stationId: int, db=Depends(get_db)):
           }
       
       route_group = grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]
-      if("nextStation" in route_group and "branchStation" in route_group):
+      if("nextStation" in route_group and "branchStation" in route_group and "previousStation" not in route_group):
         grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["previousStation"] = grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"]
         grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"] = grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["branchStation"]
     else:
-      if("previousStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
-        grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["previousStation"] = {
-          "id": row["next_station_id"],
-          "name": row["next_station_name"],
-          "code": row["next_station_code"],
-          "terminus": {
-            "id": [row["end_station_id"]],
-            "name": [row["end_station_name"]]
+      REVERSE_FIGURE_STATION_ID = {196, 197, 198, 199, 200, 201, 202, 203}
+      if(station_key in REVERSE_FIGURE_STATION_ID):
+        if("nextStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
+          grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"] = {
+            "id": row["next_station_id"],
+            "name": row["next_station_name"],
+            "code": row["next_station_code"],
+            "terminus": {
+              "id": [row["end_station_id"]],
+              "name": [row["end_station_name"]]
+            }
           }
-        }
-      elif("nextStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
-        grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"] = {
-          "id": row["next_station_id"],
-          "name": row["next_station_name"],
-          "code": row["next_station_code"],
-          "terminus": {
-            "id": [row["end_station_id"]],
-            "name": [row["end_station_name"]]
+        elif("previousStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
+          grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["previousStation"] = {
+            "id": row["next_station_id"],
+            "name": row["next_station_name"],
+            "code": row["next_station_code"],
+            "terminus": {
+              "id": [row["end_station_id"]],
+              "name": [row["end_station_name"]]
+            }
           }
-        }
-      elif("branchStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
-        grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["branchStation"] = {
-          "id": row["next_station_id"],
-          "name": row["next_station_name"],
-          "code": row["next_station_code"],
-          "terminus": {
-            "id": [row["end_station_id"]],
-            "name": [row["end_station_name"]]
+      else:
+        if("previousStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
+          grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["previousStation"] = {
+            "id": row["next_station_id"],
+            "name": row["next_station_name"],
+            "code": row["next_station_code"],
+            "terminus": {
+              "id": [row["end_station_id"]],
+              "name": [row["end_station_name"]]
+            }
           }
-        }
+        elif("nextStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
+          grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"] = {
+            "id": row["next_station_id"],
+            "name": row["next_station_name"],
+            "code": row["next_station_code"],
+            "terminus": {
+              "id": [row["end_station_id"]],
+              "name": [row["end_station_name"]]
+            }
+          }
+        elif("branchStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
+          grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["branchStation"] = {
+            "id": row["next_station_id"],
+            "name": row["next_station_name"],
+            "code": row["next_station_code"],
+            "terminus": {
+              "id": [row["end_station_id"]],
+              "name": [row["end_station_name"]]
+            }
+          }
 
     root_route_group = grouped[station_key]["line"][line_key]["routeGroup"]
     if("branchStation" in root_route_group[route_group_key]):
