@@ -658,10 +658,6 @@ def get_station(stationId: int, db=Depends(get_db)):
             }
           }
       
-      route_group = grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]
-      if("nextStation" in route_group and "branchStation" in route_group and "previousStation" not in route_group):
-        grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["previousStation"] = grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"]
-        grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"] = grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["branchStation"]
     else:
       REVERSE_FIGURE_STATION_ID = {196, 197, 198, 199, 200, 201, 202, 203}
       if(station_key in REVERSE_FIGURE_STATION_ID):
@@ -735,6 +731,12 @@ def get_station(stationId: int, db=Depends(get_db)):
           root_route_group[route_group_key]["nextStation"]["terminus"]["id"].append(root_route_group[route_group_key]["previousStation"]["terminus"]["id"][0])
           root_route_group[route_group_key]["nextStation"]["terminus"]["name"].append(root_route_group[route_group_key]["previousStation"]["terminus"]["name"][0])
         root_route_group[route_group_key].pop("previousStation", None)
+    
+    route_group = grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]
+    if("nextStation" in route_group and "branchStation" in route_group and "previousStation" not in route_group):
+      route_group["previousStation"] = route_group["nextStation"]
+      route_group["nextStation"] = route_group["branchStation"]
+      route_group.pop("branchStation", None)
 
   for station in grouped.values():
     station["line"] = [
