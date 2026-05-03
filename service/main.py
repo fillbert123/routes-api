@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.2.8",
+  version="0.2.9",
   description="Route API (Reykjavik)"
 )
 
@@ -737,6 +737,10 @@ def get_station(stationId: int, db=Depends(get_db)):
       route_group["previousStation"] = route_group["nextStation"]
       route_group["nextStation"] = route_group["branchStation"]
       route_group.pop("branchStation", None)
+    
+    if(station_key == 178 and "nextStation" in route_group and "branchStation" not in route_group and "previousStation" not in route_group):
+      route_group["previousStation"] = route_group["nextStation"]
+      route_group.pop("nextStation", None)
 
   for station in grouped.values():
     station["line"] = [
