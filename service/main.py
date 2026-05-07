@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.2.9",
+  version="0.2.11",
   description="Route API (Reykjavik)"
 )
 
@@ -357,7 +357,8 @@ def get_route_group(routeGroupId: int, db=Depends(get_db)):
       s.name_en AS route_current_terminus_start_name,
       s2.name_en AS route_current_terminus_end_name,
       s3.name_en AS route_complete_terminus_start_name,
-      s4.name_en AS route_complete_terminus_end_name
+      s4.name_en AS route_complete_terminus_end_name,
+      s5.name_en AS route_via_name
     FROM ROUTE r
     LEFT JOIN ROUTE_GROUP rg ON rg.id = r.route_group_id
     LEFT JOIN LINE l ON l.id = rg.line_id
@@ -369,6 +370,8 @@ def get_route_group(routeGroupId: int, db=Depends(get_db)):
     LEFT JOIN STATION s3 ON s3.id = ls3.station_id
     LEFT JOIN LINE_STATION ls4 ON ls4.id = r.complete_end_station_id
     LEFT JOIN STATION s4 ON s4.id = ls4.station_id
+    LEFT JOIN LINE_STATION ls5 ON ls5.id = r.via_station_id
+    LEFT JOIN STATION s5 ON s5.id = ls5.station_id
     WHERE rg.id = :routeGroupId
     ORDER BY r.id ASC;
   """)
@@ -386,7 +389,7 @@ def get_route_group(routeGroupId: int, db=Depends(get_db)):
         "isActive": row["route_group_is_active"],
         "route": []
       }
-    grouped[route_group_key]["route"].append({
+    routeData = {
       "id": row["route_id"],
       "currentTerminus": {
         "startName": row["route_current_terminus_start_name"],
@@ -396,7 +399,11 @@ def get_route_group(routeGroupId: int, db=Depends(get_db)):
         "startName": row["route_complete_terminus_start_name"],
         "endName": row["route_complete_terminus_end_name"]
       }
-    })
+    }
+    if row["route_via_name"] is not None:
+      print('via exist')
+      routeData["via"] = row["route_via_name"]
+    grouped[route_group_key]["route"].append(routeData)
   for group in grouped.values():
     if group["route"]:
       group["route"].append(group["route"].pop(0))
