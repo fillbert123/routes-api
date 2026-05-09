@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.2.11",
+  version="0.2.12",
   description="Route API (Reykjavik)"
 )
 
@@ -259,7 +259,7 @@ def get_route_by_route_group_id(route_group_id: int, db=Depends(get_db)):
   data = result
   return data
 
-@app.get("/getSearchStationResult/{query}", tags=["v1"], deprecated=False)
+@app.get("/getSearchStationResult/{query}", tags=["v1"], deprecated=True)
 def get_search_station_result(query: str, db=Depends(get_db)):
   sql = text("""             
     SELECT 
@@ -758,3 +758,87 @@ def get_station(stationId: int, db=Depends(get_db)):
       for line in station.get("line", {}).values()
     ]
   return next(iter(grouped.values()))
+
+@app.get("/getSearchResult/{query}", tags=["v2"], deprecated=False)
+def get_search_result(query: str, db=Depends(get_db)):
+  sqlGetStation = text("""             
+    SELECT 
+      s.id AS station_id,
+      s.name_en AS station_name,
+      ls.code AS line_code,
+      l.color AS line_color
+    FROM station s
+    JOIN line_station ls ON ls.station_id = s.id
+    JOIN line l ON l.id = ls.line_id
+    WHERE LOWER(s.name_en) LIKE LOWER(:query)
+    ORDER BY s.id ASC;
+  """)
+  resultGetStation = [row._asdict() for row in db.execute(sqlGetStation, {"query": '%' + query + '%'})]
+
+  sqlGetLine = text("""
+    SELECT
+      s.name_en AS route_terminus_name,
+      s2.name_en AS route_via_name,
+      rg.id AS route_group_id,
+      rg.name AS route_group_name,
+      rg.code AS route_group_code,
+      l.id AS line_id,
+      l.code AS line_code,
+      l.name AS line_name,
+      l.color AS line_color,
+      l.is_active AS line_is_active
+    FROM route r
+    LEFT JOIN route_group rg ON rg.id = r.route_group_id
+    LEFT JOIN line l ON l.id = rg.line_id
+    LEFT JOIN line_station ls ON ls.id = r.start_station_id 
+    LEFT JOIN station s ON s.id = ls.station_id
+    LEFT JOIN line_station ls2 ON ls2.id = r.via_station_id 
+    LEFT JOIN station s2 ON s2.id = ls2.station_id
+    WHERE LOWER(l.name) LIKE LOWER(:query) OR LOWER(rg.name) LIKE LOWER(:query)
+    ORDER BY r.id ASC;
+  """)
+  resultGetLine = [row._asdict() for row in db.execute(sqlGetLine, {"query": '%' + query + '%'})]
+
+  stationGrouped = {}
+  for row in resultGetStation:
+    station_key = (row["station_id"])
+    if station_key not in stationGrouped:
+      stationGrouped[station_key] = {
+        "id": row["station_id"],
+        "name": row["station_name"],
+        "interchange": []
+      }
+    stationGrouped[station_key]["interchange"].append({
+      "code": row["line_code"],
+      "color": row["line_color"]
+    })
+
+  lineGrouped = {}
+  for row in resultGetLine:
+    route_group_key = (row["route_group_id"])
+    if route_group_key not in lineGrouped:
+      lineGrouped[route_group_key] = {
+        "line": {
+          "code": row["line_code"],
+          "name": row["line_name"],
+          "color": row["line_color"],
+          "isActive": row["line_is_active"],
+        },
+        "routeGroup": {
+          "id": row["route_group_id"],
+          "name": row["route_group_name"],
+          "code": row["route_group_code"],
+        },
+        "terminus": []
+      }
+    lineGrouped[route_group_key]["terminus"].append(row["route_terminus_name"])
+    if row["route_via_name"] is not None:
+      if "via" not in lineGrouped[route_group_key]:
+        lineGrouped[route_group_key]["via"] = []
+      lineGrouped[route_group_key]["via"].append(row["route_via_name"])
+
+  grouped = {
+    "stationResult": list(stationGrouped.values()),
+    "lineResult": list(lineGrouped.values())
+  }
+  return grouped
