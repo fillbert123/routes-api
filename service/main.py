@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.2.12",
+  version="0.3.0",
   description="Route API (Reykjavik)"
 )
 
