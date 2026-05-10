@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.3.1",
+  version="0.3.2",
   description="Route API (Reykjavik)"
 )
 
@@ -765,7 +765,9 @@ def get_search_result(query: str, db=Depends(get_db)):
     SELECT 
       s.id AS station_id,
       s.name_en AS station_name,
+      s.is_active AS station_is_active,
       ls.code AS line_code,
+      ls.is_active AS line_is_active,
       l.color AS line_color
     FROM station s
     JOIN line_station ls ON ls.station_id = s.id
@@ -806,11 +808,13 @@ def get_search_result(query: str, db=Depends(get_db)):
       stationGrouped[station_key] = {
         "id": row["station_id"],
         "name": row["station_name"],
+        "isActive": row["station_is_active"],
         "interchange": []
       }
     stationGrouped[station_key]["interchange"].append({
       "code": row["line_code"],
-      "color": row["line_color"]
+      "color": row["line_color"],
+      "isActive": row["line_is_active"]
     })
 
   lineGrouped = {}
@@ -827,7 +831,6 @@ def get_search_result(query: str, db=Depends(get_db)):
         "routeGroup": {
           "id": row["route_group_id"],
           "name": row["route_group_name"],
-          "color": row["line_color"],
           "code": row["route_group_code"],
           "terminus": []
         }
