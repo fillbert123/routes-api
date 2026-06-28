@@ -5,7 +5,7 @@ from sqlalchemy import text
 
 app = FastAPI(
   title="Route API",
-  version="0.3.2",
+  version="0.3.3",
   description="Route API (Reykjavik)"
 )
 
@@ -355,10 +355,15 @@ def get_route_group(routeGroupId: int, db=Depends(get_db)):
       r.is_active AS route_group_is_active,
       r.id AS route_id,
       s.name_en AS route_current_terminus_start_name,
+      s.abbreviation AS route_current_terminus_start_abbr,
       s2.name_en AS route_current_terminus_end_name,
+      s2.abbreviation AS route_current_terminus_end_abbr,
       s3.name_en AS route_complete_terminus_start_name,
+      s3.abbreviation AS route_complete_terminus_start_abbr,
       s4.name_en AS route_complete_terminus_end_name,
-      s5.name_en AS route_via_name
+      s4.abbreviation AS route_complete_terminus_end_abbr,
+      s5.name_en AS route_via_name,
+      s5.abbreviation AS route_via_abbr
     FROM ROUTE r
     LEFT JOIN ROUTE_GROUP rg ON rg.id = r.route_group_id
     LEFT JOIN LINE l ON l.id = rg.line_id
@@ -391,18 +396,40 @@ def get_route_group(routeGroupId: int, db=Depends(get_db)):
       }
     routeData = {
       "id": row["route_id"],
+      # "currentTerminus": {
+      #   "startName": row["route_current_terminus_start_name"],
+      #   "endName": row["route_current_terminus_end_name"]
+      # },
+      # "completeTerminus": {
+      #   "startName": row["route_complete_terminus_start_name"],
+      #   "endName": row["route_complete_terminus_end_name"]
+      # }
       "currentTerminus": {
-        "startName": row["route_current_terminus_start_name"],
-        "endName": row["route_current_terminus_end_name"]
+        "start": {
+          "name": row["route_current_terminus_start_name"],
+          "abbr": row["route_current_terminus_start_abbr"]
+        },
+        "end": {
+          "name": row["route_current_terminus_end_name"],
+          "abbr": row["route_current_terminus_end_abbr"]
+        }
       },
       "completeTerminus": {
-        "startName": row["route_complete_terminus_start_name"],
-        "endName": row["route_complete_terminus_end_name"]
+        "start": {
+          "name": row["route_complete_terminus_start_name"],
+          "abbr": row["route_complete_terminus_start_abbr"]
+        },
+        "end": {
+          "name": row["route_complete_terminus_end_name"],
+          "abbr": row["route_complete_terminus_end_abbr"]
+        }
       }
     }
     if row["route_via_name"] is not None:
-      print('via exist')
-      routeData["via"] = row["route_via_name"]
+      routeData["via"] = {
+        "name": row["route_via_name"],
+        "abbr": row["route_via_abbr"]
+      }
     grouped[route_group_key]["route"].append(routeData)
   for group in grouped.values():
     if group["route"]:
