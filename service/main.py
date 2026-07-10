@@ -2,10 +2,12 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from service.database import get_db
 from sqlalchemy import text
+from collections import defaultdict
+import heapq
 
 app = FastAPI(
   title="Route API",
-  version="0.3.3",
+  version="1.0.0",
   description="Route API (Reykjavik)"
 )
 
@@ -873,3 +875,140 @@ def get_search_result(query: str, db=Depends(get_db)):
     "lineResult": list(lineGrouped.values())
   }
   return grouped
+
+@app.get("/getDirection", tags=["v2"], deprecated=False)
+def get_direction(stationStartId: int, stationEndId: int, db=Depends(get_db)):
+  sqlGetLineStation = text("""
+    SELECT
+      s.id AS station_id,
+      ls.id AS line_station_id
+    FROM line_station ls
+    JOIN station s ON s.id = ls.station_id
+    WHERE s.id = :stationStartId OR s.id = :stationEndId
+  """)
+  resultGetLineStation = [row._asdict() for row in db.execute(sqlGetLineStation, {"stationStartId": stationStartId, "stationEndId": stationEndId})]
+
+  grouped = defaultdict(list)
+  for row in resultGetLineStation:
+    grouped[row["station_id"]].append(
+      row["line_station_id"]
+    )
+
+  sqlGetDirection = text("""
+    SELECT
+      e.*
+    FROM edge e
+  """)
+  resultGetDirection = [row._asdict() for row in db.execute(sqlGetDirection)]
+
+  graph = defaultdict(list)
+  for row in resultGetDirection:
+    graph[row["start_line_station_id"]].append(
+        (row["end_line_station_id"], row["id"], row["duration"])
+    )
+    graph[row["end_line_station_id"]].append(
+        (row["start_line_station_id"], row["id"], row["duration"])
+    )
+
+  startNodes = grouped[stationStartId]
+  endNodes = grouped[stationEndId]
+  routingResult = dijkstra(graph, startNodes, endNodes)
+
+  sqlGetRoutingDetail = text("""
+    SELECT 
+      ls.id AS line_station_id, 
+      ls.code AS line_station_code,
+      s.id AS station_id,
+      s.name_en AS station_name,
+      l.name AS line_name,
+      l.color AS line_color, 
+      rg.code AS route_group_code, 
+      rg.name AS route_group_name
+    FROM line_station ls
+    JOIN station s ON s.id = ls.station_id
+    JOIN line l ON l.id = ls.line_id
+    JOIN route_group rg ON rg.id = ls.route_group_id
+    WHERE ls.id = ANY(:routingResult);  
+  """)
+  resultGetRoutingDetail = [row._asdict() for row in db.execute(sqlGetRoutingDetail, {"routingResult": routingResult['path']})]
+
+  row_map = {
+    row["line_station_id"]: row
+    for row in resultGetRoutingDetail
+  }
+  resultGetRoutingDetailSorted = [
+    row_map[line_station_id]
+    for line_station_id in routingResult['path']
+  ]
+
+  totalStation = len(resultGetRoutingDetailSorted)
+  for i, row in enumerate(resultGetRoutingDetailSorted):
+    if i != 0:
+      prevRow = resultGetRoutingDetailSorted[i-1]
+      if row['station_id'] == prevRow['stationId']:
+        row['prevLineColor'] = 'white'
+      else:
+        row['prevLineColor'] = row['line_color']
+    if i != totalStation - 1:
+      nextRow = resultGetRoutingDetailSorted[i+1]
+      if row['station_id'] == nextRow['station_id']:
+        row['nextLineColor'] = 'white'
+      else:
+        row['nextLineColor'] = row['line_color']
+    row['lineStationId'] = row.pop('line_station_id')
+    row['lineStationCode'] = row.pop('line_station_code')
+    row['stationId'] = row.pop('station_id')
+    row['stationName'] = row.pop('station_name')
+    row['lineName'] = row.pop('line_name')
+    row['routeGroupCode'] = row.pop('route_group_code')
+    row['routeGroupName'] = row.pop('route_group_name')
+    row.pop('line_color')
+
+  return resultGetRoutingDetailSorted
+
+INF = float("inf")
+def dijkstra(
+  graph: dict[int, list[tuple[int, int]]],
+  start_nodes: list[int],
+  end_nodes: list[int],
+):
+  distance = {}
+  previous = {}
+  previous_edge = {}
+  pq = []
+  end_set = set(end_nodes)
+  for start in start_nodes:
+    distance[start] = 0
+    heapq.heappush(pq, (0, start))
+  while pq:
+    current_distance, current = heapq.heappop(pq)
+    if current_distance > distance[current]:
+      continue
+    if current in end_set:
+      path = []
+      edges = []
+      node = current
+      while node in previous:
+        path.append(node)
+        edges.append(previous_edge[node])
+        node = previous[node]
+      path.append(node)
+      path.reverse()
+      edges.reverse()
+      return {
+        "distance": current_distance,
+        "path": path,
+        "edges": edges,
+        "end_node": current,
+      }
+    for neighbor, edge_id, weight in graph.get(current, []):
+      new_distance = current_distance + weight
+      if new_distance < distance.get(neighbor, INF):
+        distance[neighbor] = new_distance
+        previous[neighbor] = current
+        previous_edge[neighbor] = edge_id
+        heapq.heappush(
+          pq,
+          (new_distance, neighbor),
+        )
+  return None
