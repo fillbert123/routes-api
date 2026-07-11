@@ -7,7 +7,7 @@ import heapq
 
 app = FastAPI(
   title="Route API",
-  version="1.0.0",
+  version="1.0.1",
   description="Route API (Reykjavik)"
 )
 
@@ -914,6 +914,8 @@ def get_direction(stationStartId: int, stationEndId: int, db=Depends(get_db)):
   endNodes = grouped[stationEndId]
   routingResult = dijkstra(graph, startNodes, endNodes)
 
+  lineStationIdList = [step["lineStationId"] for step in routingResult["path"]]
+
   sqlGetRoutingDetail = text("""
     SELECT 
       ls.id AS line_station_id, 
@@ -928,29 +930,25 @@ def get_direction(stationStartId: int, stationEndId: int, db=Depends(get_db)):
     JOIN station s ON s.id = ls.station_id
     JOIN line l ON l.id = ls.line_id
     JOIN route_group rg ON rg.id = ls.route_group_id
-    WHERE ls.id = ANY(:routingResult);  
+    WHERE ls.id = ANY(:lineStationIdList);  
   """)
-  resultGetRoutingDetail = [row._asdict() for row in db.execute(sqlGetRoutingDetail, {"routingResult": routingResult['path']})]
+  resultGetRoutingDetail = {row.line_station_id: row._asdict() for row in db.execute(sqlGetRoutingDetail, {"lineStationIdList": lineStationIdList})}
 
-  row_map = {
-    row["line_station_id"]: row
-    for row in resultGetRoutingDetail
-  }
-  resultGetRoutingDetailSorted = [
-    row_map[line_station_id]
-    for line_station_id in routingResult['path']
-  ]
+  for step in routingResult["path"]:
+    detail = resultGetRoutingDetail.get(step["lineStationId"])
+    if detail:
+      step.update(detail)
 
-  totalStation = len(resultGetRoutingDetailSorted)
-  for i, row in enumerate(resultGetRoutingDetailSorted):
+  totalStation = routingResult["totalStation"]
+  for i, row in enumerate(routingResult["path"]):
     if i != 0:
-      prevRow = resultGetRoutingDetailSorted[i-1]
+      prevRow = routingResult["path"][i-1]
       if row['station_id'] == prevRow['stationId']:
         row['prevLineColor'] = 'white'
       else:
         row['prevLineColor'] = row['line_color']
     if i != totalStation - 1:
-      nextRow = resultGetRoutingDetailSorted[i+1]
+      nextRow = routingResult["path"][i+1]
       if row['station_id'] == nextRow['station_id']:
         row['nextLineColor'] = 'white'
       else:
@@ -964,7 +962,7 @@ def get_direction(stationStartId: int, stationEndId: int, db=Depends(get_db)):
     row['routeGroupName'] = row.pop('route_group_name')
     row.pop('line_color')
 
-  return resultGetRoutingDetailSorted
+  return routingResult
 
 INF = float("inf")
 def dijkstra(
@@ -985,21 +983,22 @@ def dijkstra(
     if current_distance > distance[current]:
       continue
     if current in end_set:
-      path = []
-      edges = []
+      route = []
       node = current
-      while node in previous:
-        path.append(node)
-        edges.append(previous_edge[node])
+      while True:
+        route.append({
+          "lineStationId": node,
+          "edgeId": previous_edge.get(node),
+          "cumulativeDistance": distance[node],
+        })
+        if node not in previous:
+          break
         node = previous[node]
-      path.append(node)
-      path.reverse()
-      edges.reverse()
+      route.reverse()
       return {
         "distance": current_distance,
-        "path": path,
-        "edges": edges,
-        "end_node": current,
+        "totalStation": len(route),
+        "path": route
       }
     for neighbor, edge_id, weight in graph.get(current, []):
       new_distance = current_distance + weight
