@@ -7,7 +7,7 @@ import heapq
 
 app = FastAPI(
   title="Route API",
-  version="1.0.1",
+  version="1.1.0",
   description="Route API (Reykjavik)"
 )
 
@@ -398,14 +398,6 @@ def get_route_group(routeGroupId: int, db=Depends(get_db)):
       }
     routeData = {
       "id": row["route_id"],
-      # "currentTerminus": {
-      #   "startName": row["route_current_terminus_start_name"],
-      #   "endName": row["route_current_terminus_end_name"]
-      # },
-      # "completeTerminus": {
-      #   "startName": row["route_complete_terminus_start_name"],
-      #   "endName": row["route_complete_terminus_end_name"]
-      # }
       "currentTerminus": {
         "start": {
           "name": row["route_current_terminus_start_name"],
@@ -432,6 +424,19 @@ def get_route_group(routeGroupId: int, db=Depends(get_db)):
         "name": row["route_via_name"],
         "abbr": row["route_via_abbr"]
       }
+    if routeGroupId == 6:
+      print('masuk sini')
+      print(row["route_id"])
+      if row["route_id"] == 11:
+        routeData["loopDirection"] = {
+          "name": "clockwise",
+          "abbr": "CW"
+        }
+      if row["route_id"] == 12:
+        routeData["loopDirection"] = {
+          "name": "anticlockwise",
+          "abbr": "ACW"
+        }
     grouped[route_group_key]["route"].append(routeData)
   for group in grouped.values():
     if group["route"]:
@@ -448,8 +453,9 @@ def get_route(routeId: int, db=Depends(get_db)):
       rs.stop_sequence AS station_stop_sequence,
       s.id AS station_id,
       s.name_en AS station_name,
-      ls.code AS station_code,
-      ls.is_active AS station_is_active,
+      ls.id AS current_station_id,
+      ls.code AS current_station_code,
+      ls.is_active AS current_station_is_active,
       ls2.id AS station_interchange_id,
       rg.code AS station_interchange_code,
       ls2.code AS station_interchange_station_code,
@@ -462,7 +468,7 @@ def get_route(routeId: int, db=Depends(get_db)):
     JOIN line_station ls2 ON ls2.station_id = s.id
     JOIN line l ON l.id = ls2.line_id
     JOIN route_group rg ON rg.id = ls2.route_group_id
-    WHERE r.id = :routeId
+    WHERE r.id = :routeId AND rs.is_active = true AND ls.is_active = true
     ORDER BY rs.stop_sequence, rg.id;
   """)
   result = [row._asdict() for row in db.execute(sql, {"routeId": routeId})]
@@ -480,11 +486,11 @@ def get_route(routeId: int, db=Depends(get_db)):
       grouped[route_key]["station"][station_key] = {
         "id": row["station_id"],
         "name": row["station_name"],
-        "code": row["station_code"],
-        "isActive": row["station_is_active"],
+        "code": row["current_station_code"],
+        "isActive": row["current_station_is_active"],
         "interchange": []
       }
-    if row["station_code"] != row["station_interchange_station_code"]:
+    if row["current_station_id"] != row["station_interchange_id"]:
       grouped[route_key]["station"][station_key]["interchange"].append({
         "id": row["station_interchange_id"],
         "code": row["station_interchange_code"],
@@ -538,7 +544,7 @@ def get_station(stationId: int, db=Depends(get_db)):
       JOIN route r ON r.id = rs2.route_id
       JOIN line_station ls3 ON ls3.id = r.end_station_id
       JOIN station s3 ON s3.id = ls3.station_id
-      WHERE s.id = :stationId
+      WHERE s.id = :stationId AND rs.is_active = true
       ORDER BY s2.id, rs.stop_sequence DESC;
     """)
   else:
@@ -577,7 +583,7 @@ def get_station(stationId: int, db=Depends(get_db)):
         JOIN route r ON r.id = rs2.route_id
         JOIN line_station ls3 ON ls3.id = r.end_station_id
         JOIN station s3 ON s3.id = ls3.station_id
-      where s.id = :stationId
+      where s.id = :stationId AND rs.is_active = true
       ORDER BY rs.route_id, rs.stop_sequence DESC;
     """)
 
@@ -616,28 +622,50 @@ def get_station(stationId: int, db=Depends(get_db)):
         },
       }
     
-    LOOP_LINE_ID = {10, 11}
-    if(line_key in LOOP_LINE_ID):
-      if("nextStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
-        grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"] = {
-          "id": row["next_station_id"],
-          "name": row["next_station_name"],
-          "code": row["next_station_code"],
-          "terminus": {
-            "id": [row["end_station_id"]],
-            "name": [row["end_station_name"]]
+    LOOP_ROUTE_GROUP_ID = {6, 14, 15, 16, 17}
+    if(route_group_key in LOOP_ROUTE_GROUP_ID):
+      if(route_group_key == 6):
+        if("previousStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
+          grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["previousStation"] = {
+            "id": row["next_station_id"],
+            "name": row["next_station_name"],
+            "code": row["next_station_code"],
+            "terminus": {
+              "id": [row["end_station_id"]],
+              "name": [row["end_station_name"]]
+            }
           }
-        }
-      elif("previousStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
-        grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["previousStation"] = {
-          "id": row["next_station_id"],
-          "name": row["next_station_name"],
-          "code": row["next_station_code"],
-          "terminus": {
-            "id": [row["end_station_id"]],
-            "name": [row["end_station_name"]]
+        elif("nextStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
+          grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"] = {
+            "id": row["next_station_id"],
+            "name": row["next_station_name"],
+            "code": row["next_station_code"],
+            "terminus": {
+              "id": [row["end_station_id"]],
+              "name": [row["end_station_name"]]
+            }
           }
-        }
+      else:
+        if("nextStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
+          grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["nextStation"] = {
+            "id": row["next_station_id"],
+            "name": row["next_station_name"],
+            "code": row["next_station_code"],
+            "terminus": {
+              "id": [row["end_station_id"]],
+              "name": [row["end_station_name"]]
+            }
+          }
+        elif("previousStation" not in grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]):
+          grouped[station_key]["line"][line_key]["routeGroup"][route_group_key]["previousStation"] = {
+            "id": row["next_station_id"],
+            "name": row["next_station_name"],
+            "code": row["next_station_code"],
+            "terminus": {
+              "id": [row["end_station_id"]],
+              "name": [row["end_station_name"]]
+            }
+          }
     elif(route_group_key != SPECIAL_LRT_ROUTE_GROUP_ID):
       sqlGetRouteGroupTerminus = text("""
         SELECT
@@ -693,7 +721,6 @@ def get_station(stationId: int, db=Depends(get_db)):
               "name": [branchTerminus['terminus_name']]
             }
           }
-      
     else:
       REVERSE_FIGURE_STATION_ID = {196, 197, 198, 199, 200, 201, 202, 203}
       if(station_key in REVERSE_FIGURE_STATION_ID):
@@ -776,8 +803,7 @@ def get_station(stationId: int, db=Depends(get_db)):
     
     if(station_key == 178 and "nextStation" in route_group and "branchStation" not in route_group and "previousStation" not in route_group):
       route_group["previousStation"] = route_group["nextStation"]
-      route_group.pop("nextStation", None)
-
+      route_group.pop("nextStation", None)  
   for station in grouped.values():
     station["line"] = [
       {
@@ -795,6 +821,7 @@ def get_search_result(query: str, db=Depends(get_db)):
       s.id AS station_id,
       s.name_en AS station_name,
       s.is_active AS station_is_active,
+      s.abbreviation AS station_abbr,
       ls.code AS line_code,
       ls.is_active AS line_is_active,
       l.color AS line_color
@@ -837,6 +864,7 @@ def get_search_result(query: str, db=Depends(get_db)):
       stationGrouped[station_key] = {
         "id": row["station_id"],
         "name": row["station_name"],
+        "abbr": row["station_abbr"],
         "isActive": row["station_is_active"],
         "interchange": []
       }
