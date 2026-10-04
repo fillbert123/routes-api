@@ -7,7 +7,7 @@ import heapq
 
 app = FastAPI(
   title="Route API",
-  version="1.1.5",
+  version="1.1.6",
   description="Route API (Reykjavik)"
 )
 
@@ -1010,12 +1010,11 @@ def get_direction(stationStartId: int, stationEndId: int, db=Depends(get_db)):
 
   totalStation = routingResult["totalStation"]
   for i, row in enumerate(routingResult["path"]):
-    print(row)
-  for i, row in enumerate(routingResult["path"]):
     if i != 0:
       prevRow = routingResult["path"][i-1]
       if row['station_id'] == prevRow['stationId']:
         row['prevLineColor'] = 'white'
+        routingResult["totalTransfer"] = routingResult["totalTransfer"] + 1
       else:
         row['prevLineColor'] = row['line_color']
     if i != totalStation - 1:
@@ -1069,8 +1068,9 @@ def dijkstra(
       route.reverse()
       route = duplicate_station_on_pattern(route)
       return {
-        "duration": current_duration,
+        "totalDuration": current_duration,
         "totalStation": len(route),
+        "totalTransfer": 0,
         "path": route
       }
     for neighbor, edge_id, weight in graph.get(current, []):
