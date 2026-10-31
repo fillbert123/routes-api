@@ -7,7 +7,7 @@ import heapq
 
 app = FastAPI(
   title="Route API",
-  version="1.1.6",
+  version="1.1.7",
   description="Route API (Reykjavik)"
 )
 
@@ -425,8 +425,6 @@ def get_route_group(routeGroupId: int, db=Depends(get_db)):
         "abbr": row["route_via_abbr"]
       }
     if routeGroupId == 6:
-      print('masuk sini')
-      print(row["route_id"])
       if row["route_id"] == 11:
         routeData["loopDirection"] = {
           "name": "clockwise",
@@ -446,60 +444,31 @@ def get_route_group(routeGroupId: int, db=Depends(get_db)):
 
 @app.get("/getRoute/{routeId}", tags=["v2"], deprecated=False)
 def get_route(routeId: int, db=Depends(get_db)):
-  sql = ""
-  UNFINISHED_ROUTES_ID = {17, 18, 19, 20, 21, 22, 23, 24, 25}
-  if(routeId in UNFINISHED_ROUTES_ID):
-    sql = text("""
-      SELECT 
-        r.id AS route_id,
-        r.is_active AS route_is_active,
-        rs.stop_sequence AS station_stop_sequence,
-        s.id AS station_id,
-        s.name_en AS station_name,
-        ls.id AS current_station_id,
-        ls.code AS current_station_code,
-        ls.is_active AS current_station_is_active,
-        ls2.id AS station_interchange_id,
-        rg.code AS station_interchange_code,
-        ls2.code AS station_interchange_station_code,
-        l.color AS station_interchange_color,
-        ls2.is_active AS station_interchange_is_active
-      FROM route r
-      JOIN route_station rs ON rs.route_id = r.id
-      JOIN line_station ls ON ls.id = rs.line_station_id
-      JOIN station s ON s.id = ls.station_id
-      JOIN line_station ls2 ON ls2.station_id = s.id
-      JOIN line l ON l.id = ls2.line_id
-      JOIN route_group rg ON rg.id = ls2.route_group_id
-      WHERE r.id = :routeId
-      ORDER BY rs.stop_sequence, rg.id;
-    """)
-  else:
-    sql = text("""
-      SELECT 
-        r.id AS route_id,
-        r.is_active AS route_is_active,
-        rs.stop_sequence AS station_stop_sequence,
-        s.id AS station_id,
-        s.name_en AS station_name,
-        ls.id AS current_station_id,
-        ls.code AS current_station_code,
-        ls.is_active AS current_station_is_active,
-        ls2.id AS station_interchange_id,
-        rg.code AS station_interchange_code,
-        ls2.code AS station_interchange_station_code,
-        l.color AS station_interchange_color,
-        ls2.is_active AS station_interchange_is_active
-      FROM route r
-      JOIN route_station rs ON rs.route_id = r.id
-      JOIN line_station ls ON ls.id = rs.line_station_id
-      JOIN station s ON s.id = ls.station_id
-      JOIN line_station ls2 ON ls2.station_id = s.id
-      JOIN line l ON l.id = ls2.line_id
-      JOIN route_group rg ON rg.id = ls2.route_group_id
-      WHERE r.id = :routeId AND rs.is_active = true AND ls.is_active = true
-      ORDER BY rs.stop_sequence, rg.id;
-    """)
+  sql = text("""
+    SELECT 
+      r.id AS route_id,
+      r.is_active AS route_is_active,
+      rs.stop_sequence AS station_stop_sequence,
+      s.id AS station_id,
+      s.name_en AS station_name,
+      ls.id AS current_station_id,
+      ls.code AS current_station_code,
+      ls.is_active AS current_station_is_active,
+      ls2.id AS station_interchange_id,
+      rg.code AS station_interchange_code,
+      ls2.code AS station_interchange_station_code,
+      l.color AS station_interchange_color,
+      ls2.is_active AS station_interchange_is_active
+    FROM route r
+    JOIN route_station rs ON rs.route_id = r.id
+    JOIN line_station ls ON ls.id = rs.line_station_id
+    JOIN station s ON s.id = ls.station_id
+    JOIN line_station ls2 ON ls2.station_id = s.id
+    JOIN line l ON l.id = ls2.line_id
+    JOIN route_group rg ON rg.id = ls2.route_group_id
+    WHERE r.id = :routeId AND rs.is_active = true
+    ORDER BY rs.stop_sequence, rg.id;
+  """)
   result = [row._asdict() for row in db.execute(sql, {"routeId": routeId})]
   grouped = {}
   for row in result:
